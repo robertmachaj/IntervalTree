@@ -1,6 +1,7 @@
 import unittest
 from tree import *
 import time
+import random
 
 class testTree(unittest.TestCase):
     
@@ -89,25 +90,36 @@ class testTree(unittest.TestCase):
 
     # OTHER FUNCTIONALITY
     def testBalancing(self):
-        # Without the rotations, the height would be > 2
         tree = IntervalTree()
         tree.add(50, 100, 'a')
         tree.add(100, 150, 'b')
         tree.add(150, 200, 'c')
-        self.assertEqual(tree._root.height, 2)
+        self.assertLessEqual(tree._root._height, 2)
 
     def testBiggerTree(self):
         # Bigger example to test balancing and runtime
         tree = IntervalTree()
-        # Adding might take a while
-        for x in range(30):
+        for x in range(100):
             tree.add(x, x+1, str(x))
-        self.assertEqual(tree._root.height, 15)
+        self.assertLessEqual(tree._root._height, 8)
 
+        # Testing Time
         start = time.time()
-        for x in range(30):
+        for x in range(100):
             tree.testPoint(x)
         end = time.time()
-        self.assertLessEqual(end - start, 0.0005)
+        self.assertLessEqual(end - start, 0.005)
+
+        # Testing that it actually works
+        for x in range(100):
+            self.assertEqual(tree.testPoint(x + 0.5), {str(x)}, "Failed on " + str(x))
+
+    def testRandomOrder(self):
+        # Make sure that a rotation error isn't raised
+        lst = list(range(100))
+        random.shuffle(lst)
+        tree = IntervalTree()
+        for x in lst:
+            tree.add(x, x + random.randrange(1,4), str(x))
 
 unittest.main()
