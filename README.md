@@ -4,6 +4,7 @@ This is an implementation of an interval tree in Python. It has the following pu
 
 - [x] `add(start, end, name)`: Add an interval to the tree
 - [ ] `remove(interval)`: Remove an interval from the tree
+- [x] `clear()`: Clear all nodes and intervals from the tree
 - [x] `testPoint(point)`: Returns a set of any intervals which overlap with a given point
 - [x] `testRange(start, end)`: Returns any intervals that overlap with the given range (both endpoints inclusive)
 

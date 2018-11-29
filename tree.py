@@ -23,6 +23,9 @@ class IntervalTree:
     def testRange(self, start, end):
         return self._root.testRange(start, end)
 
+    def clear(self):
+        self._root = IntervalNode()
+
     def __repr__(self):
         return repr(self._root)
 
@@ -62,7 +65,6 @@ class IntervalNode:
         if self.left._isleaf:
             raise RotationError("Can't move a leaf node up")
 
-        # The spans represented by the old and new roots change so you need to re-add all of the intervals in those two nodes
         # Make copy of old intervals before clearing 
         oldrootintervals = set(self.intervals)
         newrootintervals = set(self.left.intervals)
@@ -139,8 +141,6 @@ class IntervalNode:
         else:
             return self
 
-        newroot.left._height = newroot.left._updateheight()
-        newroot.right._height = newroot.right._updateheight()
         newroot._height = newroot._updateheight()
 
         return newroot
