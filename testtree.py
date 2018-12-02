@@ -88,6 +88,39 @@ class testTree(unittest.TestCase):
         self.assertEqual(tree.testRange(180, 210), {'c'})
         self.assertEqual(tree.testRange(ninf, inf), {'a', 'b', 'c'})
 
+    # REMOVAL
+    def testRemove1(self):
+        tree = IntervalTree()
+        for x in range(20):
+            # Random so that there are some overlapping intervals
+            tree.add(x, x + random.randrange(1,7), str(x))
+        for x in range(20):
+            tree.remove(str(x))
+        self.assertTrue(tree._root._isleaf)
+        self.assertEqual(tree.testRange(ninf, inf), set())
+
+    def testRemove2(self):
+        tree = IntervalTree()
+        tree.add(5,10,'a')
+        tree.add(0,15,'b')
+        tree.add(3,7,'c')
+        tree.add(8,12,'d')
+        
+        tree.remove('a')
+        self.assertEqual(tree.testRange(ninf, inf), {'b','c','d'})
+        self.assertEqual(tree.testPoint(5), {'b','c'})
+        self.assertEqual(tree.testPoint(10), {'b','d'})
+        tree.remove('b')
+        self.assertEqual(tree.testRange(ninf, inf), {'c','d'})
+        self.assertEqual(tree.testPoint(5), {'c'})
+        self.assertEqual(tree.testPoint(10), {'d'})
+        tree.remove('c')
+        self.assertEqual(tree.testRange(ninf, inf), {'d'})
+        self.assertEqual(tree.testPoint(5), set())
+        self.assertEqual(tree.testPoint(10), {'d'})
+        tree.remove('d')
+        self.assertEqual(tree.testRange(ninf, inf), set())
+
     # OTHER FUNCTIONALITY
     def testBalancing(self):
         tree = IntervalTree()
