@@ -516,12 +516,12 @@ def testRange(self, start, end):
 
 The running time of testing a point using this interval tree is *O(log n)*, with *n* being the total number of nodes in the tree. At most, the `testPoint` method will traverse paths down the tree if the given point is equal to the root node's boundary.
 
-The running time of testing a range is *O(n)*. If the given interval is negative infinity to infinity and the interval to remove is in a leaf node, the function will traverse the whole tree.
+The running time of testing a range is *O(n)*. If the given range is negative infinity to infinity, the function will need to traverse the whole tree to find the intervals.
 
-Rotation takes *O(k)*, where *k* is the number of intervals in the nodes that are moved around. This is because those intervals need to be moved between nodes. Because of this, balancing the tree has the same runtime.
+Rotation takes *O(k)*, where *k* is the number of intervals in the nodes that are moved around. This is because those intervals need to be moved between nodes. Balancing has the same runtime.
 
 Adding an intervals takes *O(k + log n)*. The *k* comes from rotations and the *log n* comes from traversing the tree to add to the nodes. At most, the add method will add two new non-leaf nodes.
 
-The running time of removal is *O(k log n)*. The method traverses paths down the tree which have length *log n* and at each node it takes time based on the number of intervals in each node.
+The running time of removal is *O(k log n)*. The method traverses some paths down the tree which have maximum length *log n* and at each node it takes time based on the number of intervals in each node to check each conditions and reinitialize the node if necessary.
 
 Clearing the tree and getting endpoints are constant time operations, as are all other methods in the `IntervalNode`.
