@@ -155,4 +155,16 @@ class testTree(unittest.TestCase):
         for x in lst:
             tree.add(x, x + random.randrange(1,4), str(x))
 
+    def testGetEndpoints(self):
+        tree = IntervalTree()
+        tree.add(5,10,'a')
+        tree.add(3,8,'b')
+        tree.add(10,12,'c')
+        self.assertEqual(tree.getEndpoints('a'), (5,10))
+        tree.remove('a')
+        with self.assertRaises(KeyError):
+            tree.getEndpoints('a')
+        self.assertEqual(tree.getEndpoints('b'), (3,8))
+        self.assertEqual(tree.getEndpoints('c'), (10,12))
+
 unittest.main()

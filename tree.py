@@ -4,20 +4,35 @@ ninf = float('-inf')
 class IntervalTree:
     def __init__(self):
         self._root = IntervalNode()
+        self._dict = {}
 
     def add(self, start, end, name):
-        if not (start < end):
+        if not start < end:
             raise ValueError("The start of an interval must be smaller than its end")
+        if name in self._dict:
+            raise ValueError("Interval with same name already in tree")
         self._root = self._root.add(start, end, name)
+        self._dict[name] = (start, end)
 
     def remove(self, name):
-        self._root = self._root.remove(name)
+        if not name in self._dict:
+            raise KeyError("Interval not in tree")
+        start, end = self._dict[name]
+        self._root = self._root.remove(name, start, end)
+        del self._dict[name]
 
     def testPoint(self, point):
         return self._root.testPoint(point)
 
     def testRange(self, start, end):
+        if not start < end:
+            raise ValueError("The start of the range must be smaller than its end")
         return self._root.testRange(start, end)
+
+    def getEndpoints(self, name):
+        if not name in self._dict:
+            raise KeyError("Interval not in tree")
+        return self._dict[name]
 
     def clear(self):
         self._root = IntervalNode()
@@ -103,7 +118,7 @@ class IntervalNode:
     def _rotateleft(self):
         if self.right._isleaf:
             raise RotationError("Can't move a leaf node up")
-        
+
         # Make a copy of the old intervals before clearing
         oldrootintervals = set(self.intervals)
         newrootintervals = set(self.right.intervals)
@@ -190,6 +205,7 @@ class IntervalNode:
             if start >= self.boundary or end > self.boundary:
                 self.right = self.right.add(start, end, name)
 
+        # Balancing operations
         if not self._isleaf:
             self.left._height = self.left._updateheight()
             self.right._height = self.right._updateheight()
@@ -209,16 +225,16 @@ class IntervalNode:
     # Ex:
     #          7               5
     #        /   \            / \
-    #       5    [a]   -->   [] [a]
+    #       5    [a]   -->  [ ] [a]
     #      / \
-    #     [] [a]
+    #    [ ] [a]
     @property
     def _canreplacewithleft(self):
         return len(self.intervals) == 0 and \
                not self._isleaf and \
                not self.left._isleaf and \
                self.right._isleaf and \
-               self.right.intervals == self.left.intervals
+               self.right.intervals == self.left.right.intervals
 
     @property
     def _canreplacewithright(self):
@@ -226,15 +242,18 @@ class IntervalNode:
                not self._isleaf and \
                not self.right._isleaf and \
                self.left._isleaf and \
-               self.right.intervals == self.left.intervals
-    
-    def remove(self, interval):
+               self.right.left.intervals == self.left.intervals
+
+    def remove(self, interval, start, end):
         if interval in self.intervals:
             self.intervals.remove(interval)
         elif not self._isleaf:
-            self.left = self.left.remove(interval)
-            self.right = self.right.remove(interval)
+            if self.boundary >= start:
+                self.left = self.left.remove(interval, start, end)
+            if self.boundary <= end:
+                self.right = self.right.remove(interval, start, end)
 
+        # Removing unnecessary nodes
         if self._emptychildren:
             self.__init__(intervals = self.intervals, min = self.min, max = self.max)
         elif self._canreplacewithleft:
@@ -250,6 +269,7 @@ class IntervalNode:
             self.left = newl
             self.right = newr
 
+        # Balancing operations
         if not self._isleaf:
             self.left.height = self.left._updateheight()
             self.right.height = self.right._updateheight()
