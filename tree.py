@@ -217,9 +217,17 @@ class IntervalNode:
 
     @property
     def _emptychildren(self):
-        llen = len(self.left.testRange(ninf, inf)) if self.left is not None else 0
-        rlen = len(self.right.testRange(ninf, inf)) if self.left is not None else 0
-        return llen == rlen == 0
+        return not self._isleaf and \
+               self.left._isleaf and \
+               self.right._isleaf and \
+               self.left.intervals == self.right.intervals
+
+    @property
+    def _samechildren(self):
+        return not self._isleaf and \
+               self.left._isleaf and \
+               self.right._isleaf and \
+               self.left.intervals == self.right.intervals
 
     # This method checks if self is unnecessary and can be replaced with self.left:
     # Ex:
@@ -230,19 +238,39 @@ class IntervalNode:
     #    [ ] [a]
     @property
     def _canreplacewithleft(self):
-        return len(self.intervals) == 0 and \
-               not self._isleaf and \
+        return not self._isleaf and \
+               len(self.left.intervals) == 0 and \
                not self.left._isleaf and \
                self.right._isleaf and \
                self.right.intervals == self.left.right.intervals
 
     @property
     def _canreplacewithright(self):
-        return len(self.intervals) == 0 and \
-               not self._isleaf and \
+        return not self._isleaf and \
+               len(self.right.intervals) == 0 and \
                not self.right._isleaf and \
                self.left._isleaf and \
                self.right.left.intervals == self.left.intervals
+
+    @property
+    def _canrestructureright(self):
+        return not self._isleaf and \
+               not self.left._isleaf and \
+               not self.right._isleaf and \
+               len(self.left.intervals) == 0 and \
+               self.left.right.intervals == self.right.left.intervals and \
+               self.left.right._isleaf and \
+               self.right.left._isleaf
+
+    @property
+    def _canrestructureleft(self):
+        return not self._isleaf and \
+               not self.left._isleaf and \
+               not self.right._isleaf and \
+               len(self.right.intervals) == 0 and \
+               self.left.right.intervals == self.right.left.intervals and \
+               self.left.right._isleaf and \
+               self.right.left._isleaf
 
     def remove(self, interval, start, end):
         if interval in self.intervals:
@@ -255,25 +283,39 @@ class IntervalNode:
 
         # Removing unnecessary nodes
         if self._emptychildren:
-            self.__init__(intervals = self.intervals, min = self.min, max = self.max)
-        elif self._canreplacewithleft:
+            self.__init__(None, self.intervals, min = self.min, max = self.max)
+        if self._samechildren:
+            self.__init__(None, self.left.intervals, self.min, self.max)
+        if self._canreplacewithleft:
             newl = self.left.left
             newr = self.left.right
-            self.__init__(self.left.boundary, self.left.intervals, min = self.min, max = self.max)
+            self.__init__(self.left.boundary, self.intervals, min = self.min, max = self.max)
             self.left = newl
             self.right = newr
-        elif self._canreplacewithright:
+        if self._canreplacewithright:
             newl = self.right.left
             newr = self.right.right
-            self.__init__(self.right.boundary, self.right.intervals, min = self.min, max = self.max)
+            self.__init__(self.right.boundary, self.intervals, min = self.min, max = self.max)
+            self.left = newl
+            self.right = newr
+        if self._canrestructureright:
+            newl = self.left.left
+            newr = self.right
+            self.__init__(self.left.boundary, self.intervals, self.min, self.max)
+            self.left = newl
+            self.right = newr
+        if self._canrestructureleft:
+            newl = self.left
+            newr = self.right.right
+            self.__init__(self.right.boundary, self.intervals, self.min, self.max)
             self.left = newl
             self.right = newr
 
         # Balancing operations
         if not self._isleaf:
-            self.left.height = self.left._updateheight()
-            self.right.height = self.right._updateheight()
-        self.height = self._updateheight()
+            self.left._height = self.left._updateheight()
+            self.right._height = self.right._updateheight()
+        self._height = self._updateheight()
 
         return self.rebalance()
 

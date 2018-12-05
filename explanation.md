@@ -25,7 +25,7 @@ For a collection of intervals on the number line, the corresponding elementary i
 
 ![Elementary Intervals](img/elemint.svg)
 
-Each node in the interval tree represents a subinterval. Non-leaf nodes also contain a boundary value. The nodes are arranged as a binary search tree with the boundaries as the keys. In this tree, the leaves are special, since they have no boundary and are not considered in checking the binary tree property.
+Each node in the interval tree represents a subinterval. Non-leaf nodes also contain a boundary value. The nodes are arranged as a binary search tree with the boundaries as the keys. In this tree, the leaves are special, since they have no boundary and are not considered in checking the binary search tree property.
 
 Given a node that represents the interval [*x*, *z*]​ and has the boundary value *y*, then the left child of that node represents the interval [*x*, *y*] and the right child represents [*y*, *z*].
 
@@ -94,9 +94,9 @@ class IntervalNode:
     def __init__(self, boundary = None, intervals = (), min = ninf, max = inf):
         self.boundary = boundary
         self.intervals = set(intervals)
-        self.left = IntervalNode(min = min, max = boundary)\
+        self.left = IntervalNode(min = min, max = boundary) \
                     if boundary is not None else None
-        self.right = IntervalNode(min = boundary, max = max)\
+        self.right = IntervalNode(min = boundary, max = max) \
                      if boundary is not None else None
         self.min = min
         self.max = max
@@ -164,7 +164,7 @@ The next block contains methods used for balancing the tree using the AVL algori
         return rheight - lheight
 ````
 
-Rotation is a bit more complicated in this tree than in a normal binary search tree. As shown below, after a rotation the old root and new root now represent different subintervals. This means that those two nodes need to be updated. The intervals stored in those nodes then need to be moved so they are stay in the correct node.
+Rotation is a bit more complicated in this tree than in a normal binary search tree. As shown below, after a rotation the old root and new root now represent different subintervals. This means that those two nodes need to be updated. The intervals stored in those nodes then need to be moved so they are stay in the correct node. In addition to this, it is not possible to rotate a leaf node to be a parent, since it has no boundary and can not be ordered according to the binary search tree property.
 
 ![Rotation](img/rotation.svg)
 
@@ -339,19 +339,31 @@ After adding the nodes, the tree is then rebalanced. Putting all of this togethe
 
 For removal, you traverse the the tree, ending each path when it finds a node containing the interval to be removed or until it reaches a leaf. The paths that need to be traversed are narrowed down based on the endpoints of the given interval.
 
-Removing an interval can potentially leave unnecessary nodes in the tree, though. This implementation has three different cases to remove unnecessary nodes:
+Removing an interval can potentially leave unnecessary nodes in the tree, though. This implementation has six different cases to remove unnecessary nodes:
 
-1. If a node has two identical children, the two children can be removed and the node can be turned into a leaf.
+1. If a node has two empty non-leaf children, it can be replaced with a leaf that contains the same intervals as the parent.
+
+   ![Two empty children](img/removal0.svg)
+
+2. If a node has two identical children, that node can be replaced by either child.
 
    ![Two empty children](img/removal1.svg)
 
-2. If the right child and the left-right grandchild are identical, the current node can be replaced with its left child.
+3. If the right child and the left-right grandchild are identical, the current node can be replaced with its left child.
 
    ![Replacing current node with its left child](img/removal2.svg)
 
-3. The mirror of number two: If the left child and right-left grandchild are identical, the current node can be replaced with its right child.
+4. The mirror of number three: If the left child and right-left grandchild are identical, the current node can be replaced with its right child.
 
    ![Replacing current node with right child](img/removal3.svg)
+
+5. If the current node's left child has no intervals and it's left-right and right-left grandchildren have the same intervals, the tree can be replaced as shown.
+
+   ![Rare case for removing extra nodes](img/removal4.svg)
+
+6. The mirror of number five: This time, the right child has no intervals.
+
+   ![Rare case for removing extra nodes](img/removal5.svg)
 
 After checking these conditions, the tree is then rebalanced. Here it is in code, with a few extra utility methods:
 
@@ -359,29 +371,60 @@ After checking these conditions, the tree is then rebalanced. Here it is in code
     # Case 1
     @property
     def _emptychildren(self):
-        llen = len(self.left.testRange(ninf, inf)) if self.left is not None else 0
-        rlen = len(self.right.testRange(ninf, inf)) if self.left is not None else 0
-        return llen == rlen == 0
+        return not self._isleaf and \
+               self.left._isleaf and \
+               self.right._isleaf and \
+               self.left.intervals == self.right.intervals
 
     # Case 2
     @property
+    def _samechildren(self):
+        return not self._isleaf and \
+               self.left._isleaf and \
+               self.right._isleaf and \
+               self.left.intervals == self.right.intervals
+
+    # Case 3
+    @property
     def _canreplacewithleft(self):
-        return len(self.intervals) == 0 and \
-               not self._isleaf and \
+        return not self._isleaf and \
+               len(self.left.intervals) == 0 and \
                not self.left._isleaf and \
                self.right._isleaf and \
                self.right.intervals == self.left.right.intervals
 
-    # Case 3
+    # Case 4
     @property
     def _canreplacewithright(self):
-        return len(self.intervals) == 0 and \
-               not self._isleaf and \
+        return not self._isleaf and \
+               len(self.right.intervals) == 0 and \
                not self.right._isleaf and \
                self.left._isleaf and \
                self.right.left.intervals == self.left.intervals
-    
-	def remove(self, interval, start, end):
+
+    # Case 5
+    @property
+    def _canrestructureright(self):
+        return not self._isleaf and \
+               not self.left._isleaf and \
+               not self.right._isleaf and \
+               len(self.left.intervals) == 0 and \
+               self.left.right.intervals == self.right.left.intervals and \
+               self.left.right._isleaf and \
+               self.right.left._isleaf
+
+    # Case 6
+    @property
+    def _canrestructureleft(self):
+        return not self._isleaf and \
+               not self.left._isleaf and \
+               not self.right._isleaf and \
+               len(self.right.intervals) == 0 and \
+               self.left.right.intervals == self.right.left.intervals and \
+               self.left.right._isleaf and \
+               self.right.left._isleaf
+
+    def remove(self, interval, start, end):
         if interval in self.intervals:
             self.intervals.remove(interval)
         elif not self._isleaf:
@@ -389,43 +432,47 @@ After checking these conditions, the tree is then rebalanced. Here it is in code
                 self.left = self.left.remove(interval, start, end)
             if self.boundary <= end:
                 self.right = self.right.remove(interval, start, end)
-        
-        # Take care of empty nodes
+
+        # Removing unnecessary nodes
         if self._emptychildren:
-            self.__init__(intervals = self.intervals,
-                          min = self.min,
-                          max = self.max)
-        elif self._canreplacewithleft:
+            self.__init__(None, self.intervals, min = self.min, max = self.max)
+        if self._samechildren:
+            self.__init__(None, self.left.intervals, self.min, self.max)
+        if self._canreplacewithleft:
             newl = self.left.left
             newr = self.left.right
-            self.__init__(self.left.boundary,
-                          self.left.intervals,
-                          min = self.min,
-                          max = self.max)
+            self.__init__(self.left.boundary, self.left.intervals, \
+                          min = self.min, max = self.max)
             self.left = newl
             self.right = newr
-        elif self._canreplacewithright:
+        if self._canreplacewithright:
             newl = self.right.left
             newr = self.right.right
-            self.__init__(self.right.boundary,
-                          self.right.intervals,
-                          min = self.min,
-                          max = self.max)
+            self.__init__(self.right.boundary, self.right.intervals, \
+                          min = self.min, max = self.max)
+            self.left = newl
+            self.right = newr
+        if self._canrestructureright:
+            newl = self.left.left
+            newr = self.right
+            self.__init__(self.left.boundary, self.intervals, self.min, self.max)
+            self.left = newl
+            self.right = newr
+        if self._canrestructureleft:
+            newl = self.left.left
+            newr = self.right
+            self.__init__(self.left.boundary, self.intervals, self.min, self.max)
             self.left = newl
             self.right = newr
             
-        # Rebalancing operations
+        # Balancing operations
         if not self._isleaf:
-            self.left.height = self.left._updateheight()
-            self.right.height = self.right._updateheight()
-        self.height = self._updateheight()
+            self.left._height = self.left._updateheight()
+            self.right._height = self.right._updateheight()
+        self._height = self._updateheight()
 
         return self.rebalance()
 ````
-
-There is a fourth case that can be added to the removal code to take care of unneeded nodes, but it does not come up very often so I did not implement it. This case is when the current node, it's left child, right child, left-left grandchild, and right-right grandchild all contain no intervals, while the left-right and right-left grandchildren have the same intervals:
-
-![Rare case for removing extra nodes](img/removal4.svg)
 
 ##### Testing Points
 
@@ -473,6 +520,8 @@ The running time of testing a range is *O(n)*. If the given interval is negative
 
 Rotation takes *O(k)*, where *k* is the number of intervals in the nodes that are moved around. This is because those intervals need to be moved between nodes. Because of this, balancing the tree has the same runtime.
 
-[Runtime of adding and removing (and _canreplacewith*) here]
+Adding an intervals takes *O(k + log n)*. The *k* comes from rotations and the *log n* comes from traversing the tree to add to the nodes. At most, the add method will add two new non-leaf nodes.
+
+The running time of removal is *O(k log n)*. The method traverses paths down the tree which have length *log n* and at each node it takes time based on the number of intervals in each node.
 
 Clearing the tree and getting endpoints are constant time operations, as are all other methods in the `IntervalNode`.
