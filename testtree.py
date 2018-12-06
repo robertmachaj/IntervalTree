@@ -127,14 +127,14 @@ class testTree(unittest.TestCase):
         tree.add(50, 100, 'a')
         tree.add(100, 150, 'b')
         tree.add(150, 200, 'c')
-        self.assertLessEqual(tree._root._height, 2)
+        self.assertLessEqual(tree._root._height, 3)
 
     def testBiggerTree(self):
         # Bigger example to test balancing and runtime
         tree = IntervalTree()
         for x in range(100):
             tree.add(x, x+1, str(x))
-        self.assertLessEqual(tree._root._height, 8)
+        self.assertLessEqual(tree._root._height, 7)
 
         # Testing Time
         start = time.time()

@@ -72,8 +72,8 @@ class IntervalNode:
     def _updateheight(self):
         if self._isleaf:
             return 0
-        lheight = -1 if self.left._isleaf else self.left._height
-        rheight = -1 if self.right._isleaf else self.right._height
+        lheight = 0 if self.left._isleaf else self.left._height
+        rheight = 0 if self.right._isleaf else self.right._height
         return 1 + max(lheight, rheight)
 
     # BALANCING FUNCTIONS
@@ -170,8 +170,6 @@ class IntervalNode:
             newroot = self._rotateleft()
         else:
             return self
-
-        newroot._height = newroot._updateheight()
 
         return newroot
     
@@ -285,7 +283,7 @@ class IntervalNode:
         if self._emptychildren:
             self.__init__(None, self.intervals, min = self.min, max = self.max)
         if self._samechildren:
-            self.__init__(None, self.left.intervals, self.min, self.max)
+            self.__init__(None, self.left.intervals | self.intervals, self.min, self.max)
         if self._canreplacewithleft:
             newl = self.left.left
             newr = self.left.right
